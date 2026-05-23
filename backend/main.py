@@ -13,7 +13,10 @@ from database import engine, get_db
 import models, schemas, auth
 from parser import parse_log
 
-models.Base.metadata.create_all(bind=engine)
+# Schema is managed by Alembic — run `alembic upgrade head` before starting
+# the app. The previous models.Base.metadata.create_all(bind=engine) call was
+# convenient in dev but does not handle migrations (column changes, drops, etc.)
+# so it has no place in a deployed environment.
 
 # Comma-separated list of allowed origins, e.g. "http://localhost:3000,https://crashlens.app"
 CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()]
