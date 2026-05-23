@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import anthropic; print\\(anthropic.__version__\\)\")",
+      "Bash(pip install *)",
+      "Bash(pip uninstall *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\).dependencies; console.log\\(JSON.stringify\\({recharts:p.recharts,'framer-motion':p['framer-motion'],'lucide-react':p['lucide-react']},null,1\\)\\)\")"
+    ]
+  }
+}
