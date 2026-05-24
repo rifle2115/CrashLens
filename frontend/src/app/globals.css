@@ -32,6 +32,18 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* App-wide: text is not selectable by default, matching native apps. */
+body {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Inputs / textareas still need to allow selection so users can edit. */
+input, textarea, [contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 ::-webkit-scrollbar {
   width: 7px;
   height: 7px;

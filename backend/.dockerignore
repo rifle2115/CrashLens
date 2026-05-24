@@ -1,0 +1,30 @@
+# Never ship secrets into the image
+.env
+.env.*
+!.env.example
+
+# Python build / cache artifacts (we'll let pip install fresh in the image)
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local sqlite files (if any)
+*.db
+*.sqlite
+*.sqlite3
+
+# Editor / OS noise
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Docs / git
+.git/
+.gitignore
+README.md

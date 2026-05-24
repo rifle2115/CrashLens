@@ -1,0 +1,72 @@
+# Compose tells Docker how to run multiple containers as one stack.
+# `docker compose up` brings everything up; `docker compose down` tears it down.
+
+services:
+
+  # ── Postgres ────────────────────────────────────────────────────────────────
+  # Runs in its own container. The named volume `db-data` keeps the actual
+  # database files alive across `docker compose down` (only `down -v` wipes it).
+  db:
+    image: postgres:18-alpine
+    container_name: crashlens-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: crashlens
+    volumes:
+      # Postgres 18 changed the recommended mount point — data now lives in a
+      # version-prefixed subdir of /var/lib/postgresql (better for pg_upgrade).
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      # `pg_isready` is the standard Postgres readiness check.
+      # Backend depends_on this with condition: service_healthy below.
+      test: ["CMD-SHELL", "pg_isready -U postgres -d crashlens"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ── Migrations (one-shot) ───────────────────────────────────────────────────
+  # Reuses the backend image, overrides the command to run alembic instead of
+  # the web server. Starts when db is healthy, runs `alembic upgrade head`,
+  # exits. Backend waits for this to succeed before starting.
+  migrate:
+    build: ./backend
+    container_name: crashlens-migrate
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/crashlens
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"   # this service is one-shot; don't auto-restart on exit
+
+  backend:
+    build: ./backend
+    container_name: crashlens-backend
+    ports:
+      - "8000:8000"
+    environment:
+      # `db` is the service name above — Compose creates DNS for it inside the
+      # stack network. No more host.docker.internal.
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/crashlens
+      JWT_SECRET: crashlens-jwt-secret-key-2025-change-in-production
+      CORS_ORIGINS: http://localhost:3000
+    env_file:
+      - backend/.env
+    depends_on:
+      db:
+        condition: service_healthy             # db must be healthy
+      migrate:
+        condition: service_completed_successfully   # AND migrations must finish OK
+
+  frontend:
+    build: ./frontend
+    container_name: crashlens-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+# Named volume — managed by Docker, lives outside any container so data persists.
+volumes:
+  db-data:

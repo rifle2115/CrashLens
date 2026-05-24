@@ -1,0 +1,31 @@
+# Never ship secrets / build output / huge deps into the build context
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# Node deps — we install fresh in the image via `npm ci`
+node_modules/
+
+# Next.js build artifacts — built fresh in the image
+.next/
+out/
+.turbo/
+
+# Test / coverage
+coverage/
+
+# TypeScript build info — meaningless inside the image
+*.tsbuildinfo
+next-env.d.ts
+
+# Editor / OS noise
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+README.md

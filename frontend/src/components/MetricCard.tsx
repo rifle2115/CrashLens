@@ -4,9 +4,18 @@ import { useId } from "react";
 import { motion } from "framer-motion";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { Area, AreaChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import type { TooltipProps } from "recharts";
 
-function CustomTooltip({ active, payload, color, name }: TooltipProps<number, string> & { color: string; name: string }) {
+// Recharts passes its own props (active/payload/...) to the content function.
+// We type only the fields we use; trying to re-use recharts' TooltipProps
+// breaks across minor versions where the shape shifts.
+type TooltipShape = {
+  active?: boolean;
+  payload?: { value?: number }[];
+  color: string;
+  name: string;
+};
+
+function CustomTooltip({ active, payload, color, name }: TooltipShape) {
   if (!active || !payload?.length) return null;
   return (
     <div
