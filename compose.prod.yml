@@ -1,0 +1,44 @@
+# Production compose - runs on the EC2 instance.
+# Differences from dev compose.yml:
+#   - No `db` service (RDS replaces it)
+#   - All env values come from a .env file alongside this file
+#   - Frontend is built with the public-facing NEXT_PUBLIC_API_URL baked in
+
+services:
+
+  # One-shot migration runner. Backend waits for it to exit 0.
+  migrate:
+    build: ./backend
+    container_name: crashlens-migrate
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    restart: "no"
+
+  backend:
+    build: ./backend
+    container_name: crashlens-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Baked in at build time so the JS bundle knows where the backend lives.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    container_name: crashlens-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
