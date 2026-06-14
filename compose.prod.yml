@@ -1,8 +1,11 @@
 # Production compose - runs on the EC2 instance.
-# Differences from dev compose.yml:
-#   - No `db` service (RDS replaces it)
-#   - All env values come from a .env file alongside this file
-#   - Frontend is built with the public-facing NEXT_PUBLIC_API_URL baked in
+# Logs ship to CloudWatch via the awslogs driver (EC2 IAM role has perms).
+
+x-awslogs: &awslogs
+  driver: awslogs
+  options:
+    awslogs-region: us-east-1
+    awslogs-group: /crashlens/${LOG_GROUP_NAME:-default}
 
 services:
 
@@ -14,6 +17,12 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
     restart: "no"
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: us-east-1
+        awslogs-group: /crashlens/migrate
+        awslogs-stream: migrate
 
   backend:
     build: ./backend
@@ -29,12 +38,17 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: us-east-1
+        awslogs-group: /crashlens/backend
+        awslogs-stream: backend
 
   frontend:
     build:
       context: ./frontend
       args:
-        # Baked in at build time so the JS bundle knows where the backend lives.
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     container_name: crashlens-frontend
     restart: unless-stopped
@@ -42,3 +56,9 @@ services:
       - "3000:3000"
     depends_on:
       - backend
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: us-east-1
+        awslogs-group: /crashlens/frontend
+        awslogs-stream: frontend
