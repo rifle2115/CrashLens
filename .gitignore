@@ -34,9 +34,8 @@ coverage/
 .terraform.lock.hcl
 *.tfvars
 !terraform.tfvars.example
-# local terraform binary if dropped in repo root
-terraform.exe
-terraform
+# local terraform binary if dropped in repo root (Windows-only matters here)
+/terraform.exe
 
 # ── OS / editor noise ─────────────────────────────────────
 .DS_Store
