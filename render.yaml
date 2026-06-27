@@ -29,10 +29,10 @@ services:
     plan: free
     region: virginia
     healthCheckPath: /health
-    # Render injects $PORT; uvicorn must bind it. Migrations run first so the
-    # schema is current before the API accepts traffic (replaces the compose
-    # `migrate` service we used on AWS).
-    dockerCommand: sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    # start.sh runs `alembic upgrade head` then execs uvicorn on $PORT.
+    # Using a script (not an inline `sh -c "a && b"`) avoids Render's quote/env
+    # mangling of chained commands. Replaces the compose `migrate` service.
+    dockerCommand: sh start.sh
     envVars:
       - key: DATABASE_URL
         sync: false                    # paste your Neon connection string here
