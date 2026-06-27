@@ -1,0 +1,63 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Render Blueprint — deploys CrashLens (backend + frontend + Postgres) from git.
+# ═══════════════════════════════════════════════════════════════════════════════
+# How it's used:
+#   1. Push this file to GitHub.
+#   2. On Render: New + → Blueprint → pick the CrashLens repo.
+#   3. Render reads this file and creates all three resources.
+#   4. You fill in the two `sync: false` secrets when prompted.
+#
+# Every later `git push` to main auto-rebuilds and redeploys. No SSH, no compose.
+#
+# NOTE ON URLS: Render names each service https://<name>.onrender.com. The two
+# hardcoded URLs below assume the names "crashlens-backend" / "crashlens-frontend"
+# are available. If Render appends a random suffix (because the name is taken),
+# update CORS_ORIGINS and NEXT_PUBLIC_API_URL to the real URLs and redeploy.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+databases:
+  - name: crashlens-db
+    databaseName: crashlens
+    user: crashlens
+    plan: free          # free Postgres — note: deleted after 90 days (demo only)
+
+services:
+  # ── Backend: FastAPI ────────────────────────────────────────────────────────
+  - type: web
+    name: crashlens-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    # Render injects $PORT; uvicorn must bind it. Migrations run first so the
+    # schema is current before the API accepts traffic (replaces the compose
+    # `migrate` service we used on AWS).
+    dockerCommand: sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: crashlens-db
+          property: connectionString   # Render wires this automatically
+      - key: JWT_SECRET
+        generateValue: true            # Render generates a strong random value
+      - key: GROQ_API_KEY
+        sync: false                    # you paste this in the dashboard
+      - key: CORS_ORIGINS
+        value: https://crashlens-frontend.onrender.com
+
+  # ── Frontend: Next.js (standalone) ──────────────────────────────────────────
+  - type: web
+    name: crashlens-frontend
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    plan: free
+    region: oregon
+    envVars:
+      # NEXT_PUBLIC_* is baked in at BUILD time. Render passes service env vars
+      # as Docker build args, so the frontend Dockerfile's `ARG NEXT_PUBLIC_API_URL`
+      # picks this up. Must point at the backend's public URL.
+      - key: NEXT_PUBLIC_API_URL
+        value: https://crashlens-backend.onrender.com

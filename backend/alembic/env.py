@@ -25,6 +25,9 @@ config = context.config
 # Override the sqlalchemy.url from alembic.ini with the env var our app uses,
 # so dev / CI / prod all run migrations against the same target as the app.
 db_url = os.getenv("DATABASE_URL", "postgresql://postgres:1234@localhost:5432/CrashLens")
+# Normalize legacy "postgres://" (Render/Heroku) to the scheme SQLAlchemy 2.0 wants.
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
 config.set_main_option("sqlalchemy.url", db_url)
 
 # Interpret the config file for Python logging.
